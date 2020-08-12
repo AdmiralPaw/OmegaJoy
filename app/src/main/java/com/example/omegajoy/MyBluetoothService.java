@@ -1,5 +1,7 @@
 package com.example.omegajoy;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Bundle;
 import android.os.Handler;
@@ -9,11 +11,14 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.UUID;
 
 public class MyBluetoothService {
     private static final String TAG = "MY_APP_DEBUG_TAG";
     private Handler handler; // handler that gets info from Bluetooth service
     private ConnectedThread ct;
+    private UUID MY_UUID;
+    private BluetoothAdapter bluetoothAdapter;
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
@@ -25,8 +30,68 @@ public class MyBluetoothService {
         // ... (Add other message types here as needed.)
     }
 
-    public MyBluetoothService(Handler handler) {
-        this.handler = handler;
+    public MyBluetoothService(MainActivity activity) {
+        this.handler = activity.getHandler();
+        this.bluetoothAdapter = activity.getBluetoothAdapter();
+        final String UUID_STRING_WELL_KNOWN_SPP = "00001101-0000-1000-8000-00805F9B34FB";
+        MY_UUID = UUID.fromString(UUID_STRING_WELL_KNOWN_SPP);
+    }
+
+    private class ConnectThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final BluetoothDevice mmDevice;
+
+        public ConnectThread(BluetoothDevice device) {
+            // Use a temporary object that is later assigned to mmSocket
+            // because mmSocket is final.
+            BluetoothSocket tmp = null;
+            mmDevice = device;
+
+            try {
+                // Get a BluetoothSocket to connect with the given BluetoothDevice.
+                // MY_UUID is the app's UUID string, also used in the server code.
+                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException e) {
+                Log.e(TAG, "Socket's create() method failed", e);
+                System.out.println("Socket's create() method failed");
+            }
+            mmSocket = tmp;
+        }
+
+        public void run() {
+            // Cancel discovery because it otherwise slows down the connection.
+            //bluetoothAdapter.cancelDiscovery();
+
+            try {
+                // Connect to the remote device through the socket. This call blocks
+                // until it succeeds or throws an exception.
+                mmSocket.connect();
+                //TODO сделать возвращение к выбору подключения, если не удалось подключится
+            } catch (IOException connectException) {
+                // Unable to connect; close the socket and return.
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException) {
+                    Log.e(TAG, "Could not close the client socket", closeException);
+                    System.out.println("Could not close the connect socket");
+                }
+                return;
+            }
+
+            // The connection attempt succeeded. Perform work associated with
+            // the connection in a separate thread.
+            manageMyConnectedSocket(mmSocket);
+        }
+
+        // Closes the client socket and causes the thread to finish.
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Could not close the client socket", e);
+                System.out.println("Could not close the connect socket");
+            }
+        }
     }
 
     private class ConnectedThread extends Thread {
@@ -73,7 +138,6 @@ public class MyBluetoothService {
                     readMsg.sendToTarget();
                 } catch (IOException e) {
                     Log.d(TAG, "Input stream was disconnected", e);
-                    System.out.println("Input stream was disconnected");
                     break;
                 }
             }
@@ -83,7 +147,10 @@ public class MyBluetoothService {
         public void write(byte[] bytes) {
             try {
                 mmOutStream.write(bytes);
-
+//                mmInStream.read(mmBuffer);
+//                while (!new String((byte[]) mmBuffer).equals("-1")){
+//                    mmInStream.read(mmBuffer);
+//                }
                 // Share the sent message with the UI activity.
                 Message writtenMsg = handler.obtainMessage(
                         MessageConstants.MESSAGE_WRITE, -1, -1, mmBuffer);
@@ -118,8 +185,20 @@ public class MyBluetoothService {
         ct.start();
     }
 
-    public void write(String message) {
-        byte[] message_bytes = message.getBytes();
-        ct.write(message_bytes);
+    public void write(final String data) {
+        // FIXME: 11/23/15 flood output T_T
+        final Handler handler = new Handler();
+        final byte[] message_bytes = data.getBytes();
+        final Runnable r = new Runnable() {
+            public void run() {
+                ct.write(message_bytes);
+            }
+        };
+        handler.postDelayed(r, 1);
+    }
+
+    public void startConnect(BluetoothDevice device){
+        ConnectThread ct = new ConnectThread(device);
+        ct.start();  // Запускаем поток для подключения Bluetooth
     }
 }

@@ -20,6 +20,9 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.jmedeisis.bugstick.Joystick;
+import com.jmedeisis.bugstick.JoystickListener;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -35,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter bluetoothAdapter;
     private ArrayList<String> pairedDeviceArrayList;
     private ArrayAdapter<String> pairedDeviceAdapter;
-    private UUID MY_UUID;
+
     private ListView listViewPairedDevice;
     private View mDecorView;
     private MyBluetoothService myBluetoothService;
@@ -46,29 +49,32 @@ public class MainActivity extends AppCompatActivity {
                 case 0:
                     textView.append(new String((byte[]) msg.obj));
                     break;
-                case 1:
-                    textView.append("nice write!\n");
-                    break;
                 default:
                     break;
             }
         }
     };
 
+    private static final int STICK_NONE = 0;
+    private static final int STICK_UP = 1;
+    private static final int STICK_UPRIGHT = 2;
+    private static final int STICK_RIGHT = 3;
+    private static final int STICK_DOWNRIGHT = 4;
+    private static final int STICK_DOWN = 5;
+    private static final int STICK_DOWNLEFT = 6;
+    private static final int STICK_LEFT = 7;
+    private static final int STICK_UPLEFT = 8;
+
+    private Joystick joystickLeft;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         textView = (TextView) findViewById(R.id.textView);
-        this.myBluetoothService = new MyBluetoothService(handler);
-
-        final String UUID_STRING_WELL_KNOWN_SPP = "00001101-0000-1000-8000-00805F9B34FB";
-        MY_UUID = UUID.fromString(UUID_STRING_WELL_KNOWN_SPP);
+        this.myBluetoothService = new MyBluetoothService(this);
 
         listViewPairedDevice = findViewById(R.id.pairedlist);
-
-
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         mDecorView = getWindow().getDecorView();
         hideSystemUI();
@@ -77,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() { // Запрос на включение Bluetooth
         super.onStart();
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (!bluetoothAdapter.isEnabled()) {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
@@ -100,69 +107,102 @@ public class MainActivity extends AppCompatActivity {
                     String itemValue = (String) listViewPairedDevice.getItemAtPosition(position);
                     String MAC = itemValue.substring(itemValue.length() - 17); // Вычленяем MAC-адрес
                     BluetoothDevice device2 = bluetoothAdapter.getRemoteDevice(MAC);
-                    ConnectThread ct = new ConnectThread(device2);
-                    ct.start();  // Запускаем поток для подключения Bluetooth
+                    myBluetoothService.startConnect(device2);
                 }
             });
         }
+        joystickLeft = (Joystick) findViewById(R.id.joystickLeft);
+        joystickLeft.setJoystickListener(new JoystickListener() {
+            @Override
+            public void onDown() {
+
+            }
+
+            @Override
+            public void onDrag(float degrees, float offset) {
+                // check position
+//                try {
+//                    Thread.sleep(100);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+                int direction = get8Direction(degrees);
+                if (direction == STICK_UP) {
+                    String data = "STICK_UP";
+                    myBluetoothService.write(data);
+                } else if (direction == STICK_UPRIGHT) {
+                    String data = "STICK_UPRIGHT";
+                    myBluetoothService.write(data);
+                } else if (direction == STICK_RIGHT) {
+                    String data = "STICK_RIGHT";
+                    myBluetoothService.write(data);
+                } else if (direction == STICK_DOWNRIGHT) {
+                    String data = "STICK_DOWNRIGHT";
+                    myBluetoothService.write(data);
+                } else if (direction == STICK_DOWN) {
+                    String data = "STICK_DOWN";
+                    myBluetoothService.write(data);
+                } else if (direction == STICK_DOWNLEFT) {
+                    String data = "STICK_DOWNLEFT";
+                    myBluetoothService.write(data);
+                } else if (direction == STICK_LEFT) {
+                    String data = "STICK_LEFT";
+                    myBluetoothService.write(data);
+                } else if (direction == STICK_UPLEFT) {
+                    String data = "STICK_UPLEFT";
+                    myBluetoothService.write(data);
+                } else {
+                    // no direction
+                }
+            }
+
+            @Override
+            public void onUp() {
+
+            }
+        });
     }
 
-    private class ConnectThread extends Thread {
-        private final BluetoothSocket mmSocket;
-        private final BluetoothDevice mmDevice;
 
-        public ConnectThread(BluetoothDevice device) {
-            // Use a temporary object that is later assigned to mmSocket
-            // because mmSocket is final.
-            BluetoothSocket tmp = null;
-            mmDevice = device;
 
-            try {
-                // Get a BluetoothSocket to connect with the given BluetoothDevice.
-                // MY_UUID is the app's UUID string, also used in the server code.
-                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-            } catch (IOException e) {
-                Log.e(TAG, "Socket's create() method failed", e);
-                System.out.println("Socket's create() method failed");
-            }
-            mmSocket = tmp;
+    public int get8Direction(float degrees) {
+        float angle = angleConvert(degrees);
+
+        if (angle >= 85 && angle < 95) {
+            return STICK_UP;
+        } else if (angle >= 40 && angle < 50) {
+            return STICK_UPRIGHT;
+        } else if (angle >= 355 || angle < 5) {
+            return STICK_RIGHT;
+        } else if (angle >= 310 && angle < 320) {
+            return STICK_DOWNRIGHT;
+        } else if (angle >= 265 && angle < 275) {
+            return STICK_DOWN;
+        } else if (angle >= 220 && angle < 230) {
+            return STICK_DOWNLEFT;
+        } else if (angle >= 175 && angle < 185) {
+            return STICK_LEFT;
+        } else if (angle >= 130 && angle < 140) {
+            return STICK_UPLEFT;
         }
 
-        public void run() {
-            // Cancel discovery because it otherwise slows down the connection.
-            bluetoothAdapter.cancelDiscovery();
+        return 0;
+    }
 
-            try {
-                //test
-                // Connect to the remote device through the socket. This call blocks
-                // until it succeeds or throws an exception.
-                mmSocket.connect();
-                //TODO сделать возвращение к выбору подключения, если не удалось подключится
-            } catch (IOException connectException) {
-                // Unable to connect; close the socket and return.
-                try {
-                    mmSocket.close();
-                } catch (IOException closeException) {
-                    Log.e(TAG, "Could not close the client socket", closeException);
-                    System.out.println("Could not close the connect socket");
-                }
-                return;
-            }
+    public int angleConvert(float degrees) {
+        int angle = 0;
+        if ((int) degrees < 0) angle = (360 + (int) degrees);
+        else angle = (int) degrees;
+        return angle;
+    }
 
-            // The connection attempt succeeded. Perform work associated with
-            // the connection in a separate thread.
-            myBluetoothService.manageMyConnectedSocket(mmSocket);
-        }
+    public int distanceConvert(float offset) {
+        int pwm = (int) (offset * 100);
+        return (pwm);
+    }
 
-        // Closes the client socket and causes the thread to finish.
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Could not close the client socket", e);
-                System.out.println("Could not close the connect socket");
-            }
-        }
+    public void myOnClick(View view) {
+        myBluetoothService.write("12345");
     }
 
     @Override
@@ -178,15 +218,23 @@ public class MainActivity extends AppCompatActivity {
         // doesn't resize when the system bars hide and show.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             mDecorView.setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                             | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                             | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE
             );
         }
     }
 
-    public void myOnClick(View view) {
-        myBluetoothService.write("12345");
+    public Handler getHandler(){
+        return this.handler;
     }
+
+    public BluetoothAdapter getBluetoothAdapter() {
+        return this.bluetoothAdapter;
+    }
+
 }

@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">OmegaJoy</string>
     <string name="menu">menu</string>
+    <string name="state_connection_failed">connection failed</string>
+    <string name="state_disconnected">disconnect</string>
+    <string name="state_connected">connected</string>
 </resources>

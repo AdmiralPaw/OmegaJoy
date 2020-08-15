@@ -1,34 +1,29 @@
 package com.example.omegajoy;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.bluetooth.BluetoothA2dp;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothProfile;
-import android.bluetooth.BluetoothServerSocket;
-import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.jmedeisis.bugstick.Joystick;
 import com.jmedeisis.bugstick.JoystickListener;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.UUID;
+
+import app.akexorcist.bluetotohspp.library.BluetoothSPP;
+import app.akexorcist.bluetotohspp.library.BluetoothState;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,12 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView textView;
     private final Handler handler = new Handler() {
         public void handleMessage(android.os.Message msg) {
-            switch (msg.what) {
-                case 0:
-                    textView.append(new String((byte[]) msg.obj));
-                    break;
-                default:
-                    break;
+            if (msg.what == 0) {
+                textView.append(new String((byte[]) msg.obj));
             }
         }
     };
@@ -67,55 +58,101 @@ public class MainActivity extends AppCompatActivity {
 
     private Joystick joystickLeft;
 
+    private ScrollView scrollView;
+    Context context;
+    BluetoothSPP bt;
+    Boolean btConnect = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        textView = (TextView) findViewById(R.id.textView);
-        this.myBluetoothService = new MyBluetoothService(this);
+        textView = findViewById(R.id.textView);
+        scrollView = findViewById(R.id.scrollView);
+        bt = new BluetoothSPP(context);
+        checkBluetoothState();
 
-        listViewPairedDevice = findViewById(R.id.pairedlist);
+        bt.setBluetoothConnectionListener(new BluetoothSPP.BluetoothConnectionListener() {
+            public void onDeviceConnected(String name, String address) {
+                // Do something when successfully connected
+                Toast.makeText(getApplicationContext(), R.string.state_connected, Toast.LENGTH_SHORT).show();
+                btConnect = true;
+//                // change setting menu
+//                MenuItem settingsItem = menu.findItem(R.id.mnuBluetooth);
+//                settingsItem.setTitle(R.string.mnu_disconnect);
+            }
+
+            public void onDeviceDisconnected() {
+                // Do something when connection was disconnected
+                Toast.makeText(getApplicationContext(), R.string.state_disconnected, Toast.LENGTH_SHORT).show();
+                btConnect = false;
+                btConnect = true;
+//                // change setting menu
+//                MenuItem settingsItem = menu.findItem(R.id.mnuBluetooth);
+//                settingsItem.setTitle(R.string.mnu_connect);
+            }
+
+            public void onDeviceConnectionFailed() {
+                // Do something when connection failed
+                Toast.makeText(getApplicationContext(), R.string.state_connection_failed, Toast.LENGTH_SHORT).show();
+                btConnect = false;
+//                // change setting menu
+//                MenuItem settingsItem = menu.findItem(R.id.mnuBluetooth);
+//                settingsItem.setTitle(R.string.mnu_connect);
+            }
+        });
+
+        bt.setOnDataReceivedListener(new BluetoothSPP.OnDataReceivedListener() {
+            public void onDataReceived(byte[] data, String message) {
+                textView.append(message + "\n");
+                scrollView.fullScroll(View.FOCUS_DOWN);
+            }
+        });
 
         mDecorView = getWindow().getDecorView();
         hideSystemUI();
     }
 
     @Override
-    protected void onStart() { // Запрос на включение Bluetooth
+    protected void onStart() {
         super.onStart();
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (!bluetoothAdapter.isEnabled()) {
-            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+        // setup bluetooth
+        if (!bt.isBluetoothEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, BluetoothState.REQUEST_ENABLE_BT);
         }
-        setup();
     }
 
-    private void setup() { // Создание списка сопряжённых Bluetooth-устройств
-        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
-        if (pairedDevices.size() > 0) { // Если есть сопряжённые устройства
-            pairedDeviceArrayList = new ArrayList<>();
-            for (BluetoothDevice device : pairedDevices) { // Добавляем сопряжённые устройства - Имя + MAC-адресс
-                pairedDeviceArrayList.add(device.getName() + "\n" + device.getAddress());
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        bt.stopService();
+    }
+
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == BluetoothState.REQUEST_CONNECT_DEVICE) {
+            if (resultCode == Activity.RESULT_OK)
+                bt.connect(data);
+            setup();
+        } else if (requestCode == BluetoothState.REQUEST_ENABLE_BT) {
+            if (resultCode == Activity.RESULT_OK) {
+                bt.setupService();
+                bt.startService(BluetoothState.DEVICE_OTHER);
+                setup();
+            } else {
+                // Do something if user doesn't choose any device (Pressed back)
             }
-            pairedDeviceAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, pairedDeviceArrayList);
-            listViewPairedDevice.setAdapter(pairedDeviceAdapter);
-            listViewPairedDevice.setOnItemClickListener(new AdapterView.OnItemClickListener() { // Клик по нужному устройству
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    listViewPairedDevice.setVisibility(View.GONE); // После клика скрываем список
-                    String itemValue = (String) listViewPairedDevice.getItemAtPosition(position);
-                    String MAC = itemValue.substring(itemValue.length() - 17); // Вычленяем MAC-адрес
-                    BluetoothDevice device2 = bluetoothAdapter.getRemoteDevice(MAC);
-                    myBluetoothService.startConnect(device2);
-                }
-            });
         }
-        joystickLeft = (Joystick) findViewById(R.id.joystickLeft);
+    }
+
+    private void setup() {
+        joystickLeft = findViewById(R.id.joystickLeft);
         joystickLeft.setJoystickListener(new JoystickListener() {
             @Override
             public void onDown() {
-
+                sendBluetoothData("STICK_DOWNED");
             }
 
             @Override
@@ -127,38 +164,43 @@ public class MainActivity extends AppCompatActivity {
 //                    e.printStackTrace();
 //                }
                 int direction = get8Direction(degrees);
-                if (direction == STICK_UP) {
-                    String data = "STICK_UP";
-                    myBluetoothService.write(data);
-                } else if (direction == STICK_UPRIGHT) {
-                    String data = "STICK_UPRIGHT";
-                    myBluetoothService.write(data);
-                } else if (direction == STICK_RIGHT) {
-                    String data = "STICK_RIGHT";
-                    myBluetoothService.write(data);
-                } else if (direction == STICK_DOWNRIGHT) {
-                    String data = "STICK_DOWNRIGHT";
-                    myBluetoothService.write(data);
-                } else if (direction == STICK_DOWN) {
-                    String data = "STICK_DOWN";
-                    myBluetoothService.write(data);
-                } else if (direction == STICK_DOWNLEFT) {
-                    String data = "STICK_DOWNLEFT";
-                    myBluetoothService.write(data);
-                } else if (direction == STICK_LEFT) {
-                    String data = "STICK_LEFT";
-                    myBluetoothService.write(data);
-                } else if (direction == STICK_UPLEFT) {
-                    String data = "STICK_UPLEFT";
-                    myBluetoothService.write(data);
-                } else {
-                    // no direction
+                int distance = distanceConvert(offset);
+                if (distance >= 75) {
+                    String data;
+                    if (direction == STICK_UP) {
+                        data = "STICK_UP";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else if (direction == STICK_UPRIGHT) {
+                        data = "STICK_UPRIGHT";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else if (direction == STICK_RIGHT) {
+                        data = "STICK_RIGHT";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else if (direction == STICK_DOWNRIGHT) {
+                        data = "STICK_DOWNRIGHT";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else if (direction == STICK_DOWN) {
+                        data = "STICK_DOWN";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else if (direction == STICK_DOWNLEFT) {
+                        data = "STICK_DOWNLEFT";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else if (direction == STICK_LEFT) {
+                        data = "STICK_LEFT";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else if (direction == STICK_UPLEFT) {
+                        data = "STICK_UPLEFT";
+                        sendBluetoothData(data + " " + distanceConvert(offset));
+                    } else {
+                        data = "0";
+                    }
+                    Log.d("LOG_Pre", data);
                 }
             }
 
             @Override
             public void onUp() {
-
+                sendBluetoothData("STICK_UPPED");
             }
         });
     }
@@ -190,19 +232,54 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public int angleConvert(float degrees) {
-        int angle = 0;
+        int angle;
         if ((int) degrees < 0) angle = (360 + (int) degrees);
         else angle = (int) degrees;
         return angle;
     }
 
     public int distanceConvert(float offset) {
-        int pwm = (int) (offset * 100);
-        return (pwm);
+        return ((int) (offset * 100));
     }
 
     public void myOnClick(View view) {
-        myBluetoothService.write("12345");
+        checkBluetoothState();
+    }
+
+    private void checkBluetoothState() {
+        if (bt.isBluetoothEnabled()) {
+            if (this.btConnect) {
+                bt.disconnect();
+            }
+            bt.setupService();
+            //bt.startService(BluetoothState.DEVICE_OTHER);
+            bt.startService(BluetoothState.DEVICE_OTHER);
+            // load device list
+            Intent intent = new Intent(MainActivity.this, MyDeviceList.class);
+            intent.putExtra("bluetooth_devices", "Bluetooth devices");
+            intent.putExtra("no_devices_found", "No device");
+            intent.putExtra("scanning", "Scanning");
+            intent.putExtra("scan_for_devices", "Search");
+            intent.putExtra("landscape", "true");
+            intent.putExtra("select_device", "Select");
+            intent.putExtra("layout_list", R.layout.bluetooth_divices);
+//            intent.putExtra("layout_text", R.layout.device_layout_text);
+            startActivityForResult(intent, BluetoothState.REQUEST_CONNECT_DEVICE);
+        }
+    }
+
+    public void sendBluetoothData(final String data) {
+        // FIXME: 11/23/15 flood output T_T (понять в чем проблема)
+
+        final Handler handler = new Handler();
+
+        final Runnable r = new Runnable() {
+            public void run() {
+                Log.d("LOG", data);
+                bt.send(data, true);
+            }
+        };
+        handler.postDelayed(r, 200);
     }
 
     @Override

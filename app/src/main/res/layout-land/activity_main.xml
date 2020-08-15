@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/holo_blue_dark">
+    android:background="@android:color/holo_blue_dark"
+    tools:ignore="MissingDefaultResource">
 
     <com.jmedeisis.bugstick.Joystick
         android:id="@+id/joystickLeft"
@@ -21,7 +22,8 @@
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0">
+        app:layout_constraintVertical_bias="1.0"
+        app:start_on_first_touch="false">
 
         <!-- You may use any View here. -->
         <Button
@@ -31,49 +33,33 @@
 
     </com.jmedeisis.bugstick.Joystick>
 
-    <LinearLayout
-        android:id="@+id/linearLayout"
+    <ScrollView
+        android:id="@+id/scrollView"
+        style="@android:style/Widget.Holo.ScrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
-        android:orientation="vertical"
+        android:background="#2B2B2B"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
+        android:scrollbarStyle="insideInset"
+        android:scrollbars="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/presetLayout"
+        app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toEndOf="@+id/joystickLeft"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0">
+        app:layout_constraintVertical_bias="0">
 
-        <ListView
-            android:id="@+id/pairedlist"
-            android:layout_width="match_parent"
-            android:layout_height="204dp"
-            android:background="#000000"
-            android:visibility="visible" />
-
-        <ScrollView
-            android:id="@+id/scrollView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/background_light">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/textView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="#000000"
-                    tools:layout_editor_absoluteY="-103dp" />
-            </LinearLayout>
-        </ScrollView>
-
-    </LinearLayout>
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" />
+    </ScrollView>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/presetLayout"
@@ -139,6 +125,7 @@
         android:layout_width="wrap_content"
         android:layout_height="32dp"
         android:background="#C8C6C6"
+        android:onClick="myOnClick"
         android:text="@string/menu"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

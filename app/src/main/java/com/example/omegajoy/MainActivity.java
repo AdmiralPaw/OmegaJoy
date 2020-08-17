@@ -4,9 +4,11 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -55,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int STICK_DOWNLEFT = 6;
     private static final int STICK_LEFT = 7;
     private static final int STICK_UPLEFT = 8;
+    private static final int RESULT_SETTING = 0;
 
     private Joystick joystickLeft;
 
@@ -62,11 +65,13 @@ public class MainActivity extends AppCompatActivity {
     Context context;
     BluetoothSPP bt;
     Boolean btConnect = false;
+    SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
         textView = findViewById(R.id.textView);
         scrollView = findViewById(R.id.scrollView);
         bt = new BluetoothSPP(context);
@@ -168,28 +173,28 @@ public class MainActivity extends AppCompatActivity {
                 if (distance >= 75) {
                     String data;
                     if (direction == STICK_UP) {
-                        data = "STICK_UP";
+                        data = prefs.getString("pref_stick_up", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else if (direction == STICK_UPRIGHT) {
-                        data = "STICK_UPRIGHT";
+                        data = prefs.getString("pref_stick_upright", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else if (direction == STICK_RIGHT) {
-                        data = "STICK_RIGHT";
+                        data = prefs.getString("pref_stick_right", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else if (direction == STICK_DOWNRIGHT) {
-                        data = "STICK_DOWNRIGHT";
+                        data = prefs.getString("pref_stick_downright", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else if (direction == STICK_DOWN) {
-                        data = "STICK_DOWN";
+                        data = prefs.getString("pref_stick_down", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else if (direction == STICK_DOWNLEFT) {
-                        data = "STICK_DOWNLEFT";
+                        data = prefs.getString("pref_stick_downleft", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else if (direction == STICK_LEFT) {
-                        data = "STICK_LEFT";
+                        data = prefs.getString("pref_stick_left", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else if (direction == STICK_UPLEFT) {
-                        data = "STICK_UPLEFT";
+                        data = prefs.getString("pref_stick_upleft", "");
                         sendBluetoothData(data + " " + distanceConvert(offset));
                     } else {
                         data = "0";
@@ -210,22 +215,22 @@ public class MainActivity extends AppCompatActivity {
     public int get8Direction(float degrees) {
         float angle = angleConvert(degrees);
 
-        if (angle >= 85 && angle < 95) {
+        if (angle >= 45 && angle < 135) {
             return STICK_UP;
-        } else if (angle >= 40 && angle < 50) {
-            return STICK_UPRIGHT;
-        } else if (angle >= 355 || angle < 5) {
+//        } else if (angle >= 40 && angle < 50) {
+//            return STICK_UPRIGHT;
+        } else if (angle >= 315 || angle < 45) {
             return STICK_RIGHT;
-        } else if (angle >= 310 && angle < 320) {
-            return STICK_DOWNRIGHT;
-        } else if (angle >= 265 && angle < 275) {
+//        } else if (angle >= 310 && angle < 320) {
+//            return STICK_DOWNRIGHT;
+        } else if (angle >= 225 && angle < 315) {
             return STICK_DOWN;
-        } else if (angle >= 220 && angle < 230) {
-            return STICK_DOWNLEFT;
-        } else if (angle >= 175 && angle < 185) {
+//        } else if (angle >= 220 && angle < 230) {
+//            return STICK_DOWNLEFT;
+        } else if (angle >= 135 && angle < 225) {
             return STICK_LEFT;
-        } else if (angle >= 130 && angle < 140) {
-            return STICK_UPLEFT;
+//        } else if (angle >= 130 && angle < 140) {
+//            return STICK_UPLEFT;
         }
 
         return 0;
@@ -242,9 +247,6 @@ public class MainActivity extends AppCompatActivity {
         return ((int) (offset * 100));
     }
 
-    public void myOnClick(View view) {
-        checkBluetoothState();
-    }
 
     private void checkBluetoothState() {
         if (bt.isBluetoothEnabled()) {
@@ -306,7 +308,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public Handler getHandler(){
+    public Handler getHandler() {
         return this.handler;
     }
 
@@ -314,4 +316,12 @@ public class MainActivity extends AppCompatActivity {
         return this.bluetoothAdapter;
     }
 
+    public void onBTClick(View view) {
+        checkBluetoothState();
+    }
+
+    public void onMenuClick(View view) {
+        Intent i = new Intent(getApplicationContext(), SettingsActivity.class);
+        startActivityForResult(i, RESULT_SETTING);
+    }
 }

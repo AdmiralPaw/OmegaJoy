@@ -23,9 +23,10 @@
         </activity>
         <activity
             android:name=".MyDeviceList"
-            android:screenOrientation="landscape">
-
-        </activity>
+            android:screenOrientation="landscape"></activity>
+        <activity
+            android:name=".SettingsActivity"
+            android:screenOrientation="landscape"></activity>
     </application>
 
 </manifest>

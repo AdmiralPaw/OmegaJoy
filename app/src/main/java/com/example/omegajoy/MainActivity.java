@@ -19,13 +19,12 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.jmedeisis.bugstick.Joystick;
-import com.jmedeisis.bugstick.JoystickListener;
-
 import java.util.ArrayList;
 
 import app.akexorcist.bluetotohspp.library.BluetoothSPP;
 import app.akexorcist.bluetotohspp.library.BluetoothState;
+
+import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -59,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int STICK_UPLEFT = 8;
     private static final int RESULT_SETTING = 0;
 
-    private Joystick joystickLeft;
+    private JoystickView joystickLeft;
 
     private ScrollView scrollView;
     Context context;
@@ -154,62 +153,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void setup() {
         joystickLeft = findViewById(R.id.joystickLeft);
-        joystickLeft.setJoystickListener(new JoystickListener() {
+        final TextView x = findViewById(R.id.x_text);
+        final TextView y = findViewById(R.id.y_text);
+        joystickLeft.setOnMoveListener(new JoystickView.OnMoveListener() {
             @Override
-            public void onDown() {
-                sendBluetoothData("STICK_DOWNED");
-            }
-
-            @Override
-            public void onDrag(float degrees, float offset) {
-                // check position
-//                try {
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-                int direction = get8Direction(degrees);
-                int distance = distanceConvert(offset);
-                if (distance >= 75) {
-                    String data;
-                    if (direction == STICK_UP) {
-                        data = prefs.getString("pref_stick_up", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_UPRIGHT) {
-                        data = prefs.getString("pref_stick_upright", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_RIGHT) {
-                        data = prefs.getString("pref_stick_right", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_DOWNRIGHT) {
-                        data = prefs.getString("pref_stick_downright", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_DOWN) {
-                        data = prefs.getString("pref_stick_down", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_DOWNLEFT) {
-                        data = prefs.getString("pref_stick_downleft", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_LEFT) {
-                        data = prefs.getString("pref_stick_left", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_UPLEFT) {
-                        data = prefs.getString("pref_stick_upleft", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else {
-                        data = "0";
-                    }
-                    Log.d("LOG_Pre", data);
-                }
-            }
-
-            @Override
-            public void onUp() {
-                sendBluetoothData("STICK_UPPED");
+            public void onMove(int angle, int strength) {
+                int leftEngine = get8Direction(angle);
+                int rightEngine = distanceConvert(strength);
+                x.setText(String.valueOf(joystickLeft.getNormalizedX()));
             }
         });
     }
-
 
 
     public int get8Direction(float degrees) {

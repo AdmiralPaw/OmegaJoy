@@ -33,4 +33,5 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     implementation 'com.jmedeisis:bugstick:0.2.2'
     implementation 'com.akexorcist:bluetoothspp:1.0.0'
+    implementation 'io.github.controlwear:virtualjoystick:1.10.1'
 }

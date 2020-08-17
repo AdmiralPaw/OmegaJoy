@@ -7,31 +7,29 @@
     android:background="@android:color/holo_blue_dark"
     tools:ignore="MissingDefaultResource">
 
-    <com.jmedeisis.bugstick.Joystick
+    <io.github.controlwear.virtual.joystick.android.JoystickView
         android:id="@+id/joystickLeft"
         android:layout_width="194dp"
         android:layout_height="194dp"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
         android:layout_marginBottom="16dp"
-        android:background="@drawable/bg_base"
+        app:JV_autoReCenterButton="true"
+        app:JV_backgroundColor="#009688"
+        app:JV_backgroundSizeRatio="85%"
+        app:JV_borderAlpha="10%"
+        app:JV_borderColor="#00796B"
+        app:JV_buttonColor="#FF6E40"
+        app:JV_buttonSizeRatio="20%"
+        app:JV_buttonStickToBorder="true"
+        app:JV_enabled="true"
+        app:JV_fixedCenter="true"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintEnd_toStartOf="@+id/presetLayout"
+        app:layout_constraintHorizontal_bias="0.042"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0"
-        app:start_on_first_touch="false">
-
-        <!-- You may use any View here. -->
-        <Button
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:background="@drawable/bg_stick" />
-
-    </com.jmedeisis.bugstick.Joystick>
+        app:layout_constraintVertical_bias="0.959" />
 
     <ScrollView
         android:id="@+id/scrollView"
@@ -50,7 +48,6 @@
         android:scrollbars="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/presetLayout"
-        app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toEndOf="@+id/joystickLeft"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0">
@@ -147,5 +144,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.182" />
+
+    <TextView
+        android:id="@+id/x_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/joystickLeft"
+        app:layout_constraintEnd_toStartOf="@id/y_text"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/menu_button2" />
+
+    <TextView
+        android:id="@+id/y_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/joystickLeft"
+        app:layout_constraintEnd_toStartOf="@+id/scrollView"
+        app:layout_constraintHorizontal_bias="0.6"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/menu_button2" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -66,6 +66,8 @@ public class MainActivity extends AppCompatActivity {
     BluetoothSPP bt;
     Boolean btConnect = false;
     SharedPreferences prefs;
+    private int last_angle = 0;
+    private int last_offset = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -157,57 +159,109 @@ public class MainActivity extends AppCompatActivity {
         joystickLeft.setJoystickListener(new JoystickListener() {
             @Override
             public void onDown() {
-                sendBluetoothData("STICK_DOWNED");
+                last_angle = 0;
+                last_offset = 0;
             }
 
             @Override
             public void onDrag(float degrees, float offset) {
-                // check position
-//                try {
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
+//                int direction = get8Direction(degrees);
+//                int distance = distanceConvert(offset);
+                last_angle = angleConvert(degrees);
+                last_offset = distanceConvert(offset);
+//                if (distance >= 75) {
+//                    String data;
+//                    if (direction == STICK_UP) {
+//                        data = prefs.getString("pref_stick_up", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else if (direction == STICK_UPRIGHT) {
+//                        data = prefs.getString("pref_stick_upright", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else if (direction == STICK_RIGHT) {
+//                        data = prefs.getString("pref_stick_right", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else if (direction == STICK_DOWNRIGHT) {
+//                        data = prefs.getString("pref_stick_downright", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else if (direction == STICK_DOWN) {
+//                        data = prefs.getString("pref_stick_down", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else if (direction == STICK_DOWNLEFT) {
+//                        data = prefs.getString("pref_stick_downleft", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else if (direction == STICK_LEFT) {
+//                        data = prefs.getString("pref_stick_left", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else if (direction == STICK_UPLEFT) {
+//                        data = prefs.getString("pref_stick_upleft", "");
+//                        sendBluetoothData(data + " " + distanceConvert(offset));
+//                    } else {
+//                        data = "0";
+//                    }
+//                    Log.d("LOG_Pre", data);
 //                }
-                int direction = get8Direction(degrees);
-                int distance = distanceConvert(offset);
-                if (distance >= 75) {
-                    String data;
-                    if (direction == STICK_UP) {
-                        data = prefs.getString("pref_stick_up", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_UPRIGHT) {
-                        data = prefs.getString("pref_stick_upright", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_RIGHT) {
-                        data = prefs.getString("pref_stick_right", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_DOWNRIGHT) {
-                        data = prefs.getString("pref_stick_downright", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_DOWN) {
-                        data = prefs.getString("pref_stick_down", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_DOWNLEFT) {
-                        data = prefs.getString("pref_stick_downleft", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_LEFT) {
-                        data = prefs.getString("pref_stick_left", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else if (direction == STICK_UPLEFT) {
-                        data = prefs.getString("pref_stick_upleft", "");
-                        sendBluetoothData(data + " " + distanceConvert(offset));
-                    } else {
-                        data = "0";
-                    }
-                    Log.d("LOG_Pre", data);
-                }
             }
 
             @Override
             public void onUp() {
-                sendBluetoothData("STICK_UPPED");
+                last_angle = 0;
+                last_offset = 0;
             }
         });
+        final Thread myThread = new Thread(
+                new Runnable() {
+                    public void run() {
+                        while (true) {
+//                            if (last_angle != 0 || last_offset != 0) {
+                            int x = (int) Math.ceil(last_offset * Math.cos(Math.toRadians(last_angle)));
+                            int y = (int) Math.ceil(last_offset * Math.sin(Math.toRadians(last_angle)));
+                            int left_engine = 0;
+                            int right_engine = 0;
+                            int left = 1;
+                            int right = 1;
+                            if (x >= 0 && y >= 0) { //I
+                                left_engine = last_offset;
+                                right_engine = y;
+                                left = 1;
+                                right = 1;
+                            } else if (x >= 0 && y < 0) { //II
+                                left_engine = last_offset;
+                                right_engine = -y;
+                                left = 0;
+                                right = 0;
+                            } else if (x < 0 && y >= 0) { //III
+                                left_engine = y;
+                                right_engine = last_offset;
+                                left = 1;
+                                right = 1;
+                            } else { //IV
+                                left_engine = -y;
+                                right_engine = last_offset;
+                                left = 0;
+                                right = 0;
+                            }
+                            byte[] data = new byte[3];
+                            if (last_angle != 0 || last_offset != 0) {
+                                data[0] = (byte) (100 & 0xFF);
+                            } else {
+                                data[0] = (byte) (0);
+                            }
+                            data[1] = (byte) ((left << 7) | (left_engine & 0xFF));
+                            data[2] = (byte) ((right << 7) | (right_engine & 0xFF));
+
+                            sendBluetoothData(data);
+                            try {
+                                //TODO вынести в настройки задержку
+                                Thread.sleep(50);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+//                            }
+                        }
+                    }
+                }
+        );
+        myThread.start();
     }
 
 
@@ -273,15 +327,32 @@ public class MainActivity extends AppCompatActivity {
     public void sendBluetoothData(final String data) {
         // FIXME: 11/23/15 flood output T_T (понять в чем проблема)
 
-        final Handler handler = new Handler();
+//        final Handler handler = new Handler();
+//
+//        final Runnable r = new Runnable() {
+//            public void run() {
+//                Log.d("LOG", data);
+//                bt.send(data, true);
+//            }
+//        };
+//        handler.postDelayed(r, 200);
+        Log.d("LOG", data);
+        bt.send(data, true);
+    }
 
-        final Runnable r = new Runnable() {
-            public void run() {
-                Log.d("LOG", data);
-                bt.send(data, true);
-            }
-        };
-        handler.postDelayed(r, 200);
+    public void sendBluetoothData(final byte[] data) {
+        // FIXME: 11/23/15 flood output T_T (понять в чем проблема)
+
+//        final Handler handler = new Handler();
+//
+//        final Runnable r = new Runnable() {
+//            public void run() {
+//                Log.d("LOG", data);
+//                bt.send(data, true);
+//            }
+//        };
+//        handler.postDelayed(r, 200);
+        bt.send(data, true);
     }
 
     @Override

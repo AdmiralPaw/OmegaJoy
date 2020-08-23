@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreferenceCompat
+        android:key="notifications"
+        android:title="Enable message notifications" />
+
+    <Preference
+        android:key="feedback"
+        android:title="Send feedback"
+        android:summary="Report technical issues or suggest new features" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:singleLine="true"
+        android:defaultValue="STICK_UP"
+        android:key="pref_stick_up"
+        android:selectAllOnFocus="true"
+        android:title="STICK_UP" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:defaultValue="STICK_UPRIGHT"
+        android:key="pref_stick_upright"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="STICK_UPRIGHT" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:defaultValue="STICK_RIGHT"
+        android:key="pref_stick_right"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="STICK_RIGHT" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:defaultValue="STICK_DOWNRIGHT"
+        android:key="pref_stick_downright"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="STICK_DOWNRIGHT" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:defaultValue="STICK_DOWN"
+        android:key="pref_stick_down"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="STICK_DOWN" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:defaultValue="STICK_DOWNLEFT"
+        android:key="pref_stick_downleft"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="STICK_DOWNLEFT" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:defaultValue="STICK_LEFT"
+        android:key="pref_stick_left"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="STICK_LEFT" />
+    <EditTextPreference
+        android:inputType="textCapWords"
+        android:maxLines="1"
+        android:defaultValue="STICK_UPLEFT"
+        android:key="pref_stick_upleft"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="STICK_UPLEFT" />
+</PreferenceScreen>

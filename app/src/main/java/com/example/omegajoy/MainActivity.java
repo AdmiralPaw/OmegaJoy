@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
@@ -28,22 +29,17 @@ import app.akexorcist.bluetotohspp.library.BluetoothSPP;
 import app.akexorcist.bluetotohspp.library.BluetoothState;
 
 public class MainActivity extends AppCompatActivity {
-
-    private static final int REQUEST_ENABLE_BT = 1;
-    private static final String TAG = "[Bluetooth]";
-    private static final String NAME = "omegaBot";
-    private BluetoothAdapter bluetoothAdapter;
-    private ArrayList<String> pairedDeviceArrayList;
-    private ArrayAdapter<String> pairedDeviceAdapter;
-
-    private ListView listViewPairedDevice;
     private View mDecorView;
-    private MyBluetoothService myBluetoothService;
     private TextView textView;
     private final Handler handler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             if (msg.what == 0) {
-                textView.append(new String((byte[]) msg.obj));
+                int left_engine = (int) msg.arg1;
+                int right_engine = (int) msg.arg2;
+                textView.append("" + left_engine + "   " + right_engine + "\n");
+            }
+            if (msg.what == 1) {
+                textView.setText("");
             }
         }
     };
@@ -77,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         textView = findViewById(R.id.textView);
         scrollView = findViewById(R.id.scrollView);
         bt = new BluetoothSPP(context);
+
         checkBluetoothState();
 
         bt.setBluetoothConnectionListener(new BluetoothSPP.BluetoothConnectionListener() {
@@ -94,18 +91,12 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), R.string.state_disconnected, Toast.LENGTH_SHORT).show();
                 btConnect = false;
                 btConnect = true;
-//                // change setting menu
-//                MenuItem settingsItem = menu.findItem(R.id.mnuBluetooth);
-//                settingsItem.setTitle(R.string.mnu_connect);
             }
 
             public void onDeviceConnectionFailed() {
                 // Do something when connection failed
                 Toast.makeText(getApplicationContext(), R.string.state_connection_failed, Toast.LENGTH_SHORT).show();
                 btConnect = false;
-//                // change setting menu
-//                MenuItem settingsItem = menu.findItem(R.id.mnuBluetooth);
-//                settingsItem.setTitle(R.string.mnu_connect);
             }
         });
 
@@ -165,41 +156,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onDrag(float degrees, float offset) {
-//                int direction = get8Direction(degrees);
-//                int distance = distanceConvert(offset);
                 last_angle = angleConvert(degrees);
                 last_offset = distanceConvert(offset);
-//                if (distance >= 75) {
-//                    String data;
-//                    if (direction == STICK_UP) {
-//                        data = prefs.getString("pref_stick_up", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else if (direction == STICK_UPRIGHT) {
-//                        data = prefs.getString("pref_stick_upright", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else if (direction == STICK_RIGHT) {
-//                        data = prefs.getString("pref_stick_right", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else if (direction == STICK_DOWNRIGHT) {
-//                        data = prefs.getString("pref_stick_downright", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else if (direction == STICK_DOWN) {
-//                        data = prefs.getString("pref_stick_down", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else if (direction == STICK_DOWNLEFT) {
-//                        data = prefs.getString("pref_stick_downleft", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else if (direction == STICK_LEFT) {
-//                        data = prefs.getString("pref_stick_left", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else if (direction == STICK_UPLEFT) {
-//                        data = prefs.getString("pref_stick_upleft", "");
-//                        sendBluetoothData(data + " " + distanceConvert(offset));
-//                    } else {
-//                        data = "0";
-//                    }
-//                    Log.d("LOG_Pre", data);
-//                }
             }
 
             @Override
@@ -212,42 +170,59 @@ public class MainActivity extends AppCompatActivity {
                 new Runnable() {
                     public void run() {
                         while (true) {
-//                            if (last_angle != 0 || last_offset != 0) {
-                            int x = (int) Math.ceil(last_offset * Math.cos(Math.toRadians(last_angle)));
-                            int y = (int) Math.ceil(last_offset * Math.sin(Math.toRadians(last_angle)));
+                            int x = (int) Math.floor(last_offset * Math.cos(Math.toRadians(last_angle)));
+                            int y = (int) Math.floor(last_offset * Math.sin(Math.toRadians(last_angle)));
                             int left_engine = 0;
                             int right_engine = 0;
                             int left = 1;
                             int right = 1;
-                            if (x >= 0 && y >= 0) { //I
-                                left_engine = last_offset;
-                                right_engine = y;
-                                left = 1;
-                                right = 1;
-                            } else if (x >= 0 && y < 0) { //II
-                                left_engine = last_offset;
-                                right_engine = -y;
+                            int rotate_speed = Math.abs(x);
+                            int speed = y;
+
+                            if (x > 0) {
+                                left_engine = speed + rotate_speed;
+                                right_engine = speed - rotate_speed;
+                            }
+                            else if (x < 0) {
+                                left_engine = speed - rotate_speed;
+                                right_engine = speed + rotate_speed;
+                            }
+                            else {
+                                left_engine = speed;
+                                right_engine = speed;
+                            }
+                            if (left_engine > 100)
+                                left_engine = 100;
+                            if (left_engine < -100)
+                                left_engine = -100;
+                            if (right_engine > 100)
+                                right_engine = 100;
+                            if (right_engine < -100)
+                                right_engine = -100;
+
+
+                            if (left_engine < 0) {
+                                left_engine = Math.abs(left_engine);
                                 left = 0;
-                                right = 0;
-                            } else if (x < 0 && y >= 0) { //III
-                                left_engine = y;
-                                right_engine = last_offset;
-                                left = 1;
-                                right = 1;
-                            } else { //IV
-                                left_engine = -y;
-                                right_engine = last_offset;
-                                left = 0;
+                            }
+                            if (right_engine < 0) {
+                                right_engine = Math.abs(right_engine);
                                 right = 0;
                             }
+
                             byte[] data = new byte[3];
                             if (last_angle != 0 || last_offset != 0) {
                                 data[0] = (byte) (100 & 0xFF);
+
                             } else {
                                 data[0] = (byte) (0);
                             }
                             data[1] = (byte) ((left << 7) | (left_engine & 0xFF));
                             data[2] = (byte) ((right << 7) | (right_engine & 0xFF));
+
+                            if (last_angle != 0 || last_offset != 0) {
+                                Log.d("foo", "bar");
+                            }
 
                             sendBluetoothData(data);
                             try {
@@ -256,38 +231,11 @@ public class MainActivity extends AppCompatActivity {
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
-//                            }
                         }
                     }
                 }
         );
         myThread.start();
-    }
-
-
-
-    public int get8Direction(float degrees) {
-        float angle = angleConvert(degrees);
-
-        if (angle >= 45 && angle < 135) {
-            return STICK_UP;
-//        } else if (angle >= 40 && angle < 50) {
-//            return STICK_UPRIGHT;
-        } else if (angle >= 315 || angle < 45) {
-            return STICK_RIGHT;
-//        } else if (angle >= 310 && angle < 320) {
-//            return STICK_DOWNRIGHT;
-        } else if (angle >= 225 && angle < 315) {
-            return STICK_DOWN;
-//        } else if (angle >= 220 && angle < 230) {
-//            return STICK_DOWNLEFT;
-        } else if (angle >= 135 && angle < 225) {
-            return STICK_LEFT;
-//        } else if (angle >= 130 && angle < 140) {
-//            return STICK_UPLEFT;
-        }
-
-        return 0;
     }
 
     public int angleConvert(float degrees) {
@@ -308,7 +256,6 @@ public class MainActivity extends AppCompatActivity {
                 bt.disconnect();
             }
             bt.setupService();
-            //bt.startService(BluetoothState.DEVICE_OTHER);
             bt.startService(BluetoothState.DEVICE_OTHER);
             // load device list
             Intent intent = new Intent(MainActivity.this, MyDeviceList.class);
@@ -319,40 +266,19 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra("landscape", "true");
             intent.putExtra("select_device", "Select");
             intent.putExtra("layout_list", R.layout.bluetooth_divices);
-//            intent.putExtra("layout_text", R.layout.device_layout_text);
             startActivityForResult(intent, BluetoothState.REQUEST_CONNECT_DEVICE);
         }
     }
 
     public void sendBluetoothData(final String data) {
         // FIXME: 11/23/15 flood output T_T (понять в чем проблема)
-
-//        final Handler handler = new Handler();
-//
-//        final Runnable r = new Runnable() {
-//            public void run() {
-//                Log.d("LOG", data);
-//                bt.send(data, true);
-//            }
-//        };
-//        handler.postDelayed(r, 200);
         Log.d("LOG", data);
         bt.send(data, true);
     }
 
     public void sendBluetoothData(final byte[] data) {
         // FIXME: 11/23/15 flood output T_T (понять в чем проблема)
-
-//        final Handler handler = new Handler();
-//
-//        final Runnable r = new Runnable() {
-//            public void run() {
-//                Log.d("LOG", data);
-//                bt.send(data, true);
-//            }
-//        };
-//        handler.postDelayed(r, 200);
-        bt.send(data, true);
+        bt.send(data, false);
     }
 
     @Override
@@ -377,14 +303,6 @@ public class MainActivity extends AppCompatActivity {
                             | View.SYSTEM_UI_FLAG_IMMERSIVE
             );
         }
-    }
-
-    public Handler getHandler() {
-        return this.handler;
-    }
-
-    public BluetoothAdapter getBluetoothAdapter() {
-        return this.bluetoothAdapter;
     }
 
     public void onBTClick(View view) {
